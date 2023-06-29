@@ -1,38 +1,33 @@
-const express = require("express");
-const { ApollogServer } = require("apollo-server-express");
-const path = require("path");
-const { typeDefs, resolvers } = require("./schemas");
-const db = require("./config/connection");
-const { authMiddleware } = require("./utils/auth");
-const routes = require("./routes");
+const jwt = require('jsonwebtoken');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+const secret = 'mysecretsshhhhh';
+const expiration = '2h';
 
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  context: authMiddleware,
-});
+module.exports = {
+  authMiddleware: function (req, res, next) {
+    let token = req.body.token || req.query.token || req.headers.authorization;
 
-server.applyMiddleware({ app });
+    if (req.headers.authorization) {
+      token = token.split(' ').pop().trim();
+    }
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+    if (!token) {
+      req.user = null;
+      return next(); // Call next() to proceed to the next middleware or route handler
+    }
 
-// if we're in production, serve client/build as static assets
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../client/build")));
-}
+    try {
+      const { data } = jwt.verify(token, secret, { maxAge: expiration });
+      req.user = data;
+    } catch (err) {
+      console.error(err);
+      return res.status(400).json({ message: 'invalid token!' });
+    }
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/build/index.html"));
-});
-app.use(routes);
-
-db.once("open", () => {
-  app.listen(PORT, () => console.log(`🌍 Now listening on localhost:${PORT}`));
-  console.log(
-    `GraphQL server ready at http://localhost:${PORT}${server.graphqlPath}`
-  );
-});
+    next(); // Call next() to proceed to the next middleware or route handler
+  },
+  signToken: function ({ username, email, _id }) {
+    const payload = { username, email, _id };
+    return jwt.sign({ data: payload }, secret, { expiresIn: expiration });
+  },
+};
