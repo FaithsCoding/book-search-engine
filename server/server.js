@@ -1,56 +1,45 @@
-const jwt = require("jsonwebtoken");
 const express = require("express");
 const { ApolloServer } = require("apollo-server-express");
 const path = require("path");
-const { typeDefs, resolvers } = require("./schemas");
-const db = require("./config/connection");
 const { authMiddleware } = require("./utils/auth");
 
+const { typeDefs, resolvers } = require("./schemas");
+const db = require("./config/connection");
+
+const PORT = process.env.PORT || 3010;
 const app = express();
-const PORT = process.env.PORT || 3001;
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: authMiddleware,
+});
 
-const secret = "mysecretsshhhhh";
-const expiration = "2h";
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
-async function startApolloServer() {
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-    context: authMiddleware,
-  });
+// Serve up static assets
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../client/build")));
+}
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/"));
+});
+
+// Create a new instance of an Apollo server with the GraphQL schema
+const startApolloServer = async (typeDefs, resolvers) => {
   await server.start();
-
-  server.applyMiddleware({ app, path: "/graphql" });
+  server.applyMiddleware({ app });
 
   db.once("open", () => {
     app.listen(PORT, () => {
-      console.log(`Listening on localhost:${PORT}`);
+      console.log(`API server running on port ${PORT}!`);
       console.log(
-        `GraphQL server ready at http://localhost:${PORT}${server.graphqlPath}`
+        `Use GraphQL at http://localhost:${PORT}${server.graphqlPath}`
       );
     });
   });
-}
+};
 
-startApolloServer();
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../client/public")));
-}
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/public/index.html"));
-});
-
-app.use((req, res, next) => {
-  next({ status: 404, message: "Not Found" });
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({ error: err.message });
-});
+// Call the async function to start the server
+startApolloServer(typeDefs, resolvers);
