@@ -1,9 +1,15 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+const mongoose = require("mongoose");
+require("dotenv").config();
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/googlebooks' , {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+// Connect to the MongoDB database
+mongoose.connect(
+  `${
+    process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/googlebooks"
+  }?retryWrites=false`,
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }
+);
 
-module.exports = mongoose.connection;
+module.exports = mongoose.connection; // Export the Mongoose connection object

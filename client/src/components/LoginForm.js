@@ -12,6 +12,7 @@ const LoginForm = () => {
 
   const [login, { error }] = useMutation(LOGIN_USER);
 
+  // Handles the error state change
   useEffect(() => {
     if (error) {
       setShowAlert(true);
@@ -20,11 +21,13 @@ const LoginForm = () => {
     }
   }, [error]);
 
+  // Handles the form inputs
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setUserFormData({ ...userFormData, [name]: value });
   };
 
+  // Handles the form submission
   const handleFormSubmit = async (event) => {
     event.preventDefault();
 
@@ -44,8 +47,8 @@ const LoginForm = () => {
       console.error(e);
     }
 
+    // Resets the form data
     setUserFormData({
-      username: "",
       email: "",
       password: "",
     });

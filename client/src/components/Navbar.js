@@ -9,6 +9,11 @@ import Auth from '../utils/auth';
 const AppNavbar = () => {
   const [showModal, setShowModal] = useState(false);
 
+  // Handles the modal show/hide state
+  const handleModalClose = () => {
+    setShowModal(false);
+  };
+
   return (
     <>
       <Navbar bg='dark' variant='dark' expand='lg'>
@@ -36,13 +41,14 @@ const AppNavbar = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-      {/* set modal data up */}
+      {/* Modal for Login/Sign Up */}
       <Modal
         size='lg'
         show={showModal}
-        onHide={() => setShowModal(false)}
-        aria-labelledby='signup-modal'>
-        {/* tab container to do either signup or login component */}
+        onHide={handleModalClose}
+        aria-labelledby='signup-modal'
+      >
+        {/* Tab container for Login/Sign Up */}
         <Tab.Container defaultActiveKey='login'>
           <Modal.Header closeButton>
             <Modal.Title id='signup-modal'>
@@ -59,10 +65,10 @@ const AppNavbar = () => {
           <Modal.Body>
             <Tab.Content>
               <Tab.Pane eventKey='login'>
-                <LoginForm handleModalClose={() => setShowModal(false)} />
+                <LoginForm handleModalClose={handleModalClose} />
               </Tab.Pane>
               <Tab.Pane eventKey='signup'>
-                <SignUpForm handleModalClose={() => setShowModal(false)} />
+                <SignUpForm handleModalClose={handleModalClose} />
               </Tab.Pane>
             </Tab.Content>
           </Modal.Body>
