@@ -8,32 +8,29 @@ const db = require("./config/connection");
 
 const PORT = process.env.PORT || 3010;
 const app = express();
-
-// Serves the static files
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../client/build")));
-}
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../client/"));
-});
-
-// Creates a new instance of an Apollo server with the GraphQL schemas
 const server = new ApolloServer({
   typeDefs,
   resolvers,
   context: authMiddleware,
 });
 
-server.applyMiddleware({ app });
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
-// Starts the Apollo server
-const startApolloServer = async () => {
+// Serve up static assets
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../client/build")));
+}
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/"));
+});
+
+// Create a new instance of an Apollo server with the GraphQL schema
+const startApolloServer = async (typeDefs, resolvers) => {
   await server.start();
-  
+  server.applyMiddleware({ app });
+
   db.once("open", () => {
     app.listen(PORT, () => {
       console.log(`API server running on port ${PORT}!`);
@@ -44,5 +41,5 @@ const startApolloServer = async () => {
   });
 };
 
-// Call the async function so the server starts
-startApolloServer();
+// Call the async function to start the server
+startApolloServer(typeDefs, resolvers);
