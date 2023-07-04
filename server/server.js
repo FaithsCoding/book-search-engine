@@ -1,41 +1,56 @@
-const jwt = require('jsonwebtoken');
-const express = require('express');
+const jwt = require("jsonwebtoken");
+const express = require("express");
 const { ApolloServer } = require("apollo-server-express");
-const path = require('path');
+const path = require("path");
 const { typeDefs, resolvers } = require("./schemas");
-const db = require('./config/connection');
-const { authMiddleware } = require('./utils/auth');
+const db = require("./config/connection");
+const { authMiddleware } = require("./utils/auth");
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const secret = 'mysecretsshhhhh';
-const expiration = '2h';
+const secret = "mysecretsshhhhh";
+const expiration = "2h";
 
-module.exports = {
-  authMiddleware: function (req, res, next) {
-    let token = req.body.token || req.query.token || req.headers.authorization;
+async function startApolloServer() {
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    context: authMiddleware,
+  });
 
-    if (req.headers.authorization) {
-      token = token.split(' ').pop().trim();
-    }
+  await server.start();
 
-    if (!token) {
-      req.user = null;
-      return next(); // Call next() to proceed to the next middleware or route handler
-    }
+  server.applyMiddleware({ app, path: "/graphql" });
 
-    try {
-      const { data } = jwt.verify(token, secret, { maxAge: expiration });
-      req.user = data;
-    } catch (err) {
-      console.error(err);
-      return res.status(400).json({ message: 'invalid token!' });
-    }
+  db.once("open", () => {
+    app.listen(PORT, () => {
+      console.log(`Listening on localhost:${PORT}`);
+      console.log(
+        `GraphQL server ready at http://localhost:${PORT}${server.graphqlPath}`
+      );
+    });
+  });
+}
 
-    next(); // Call next() to proceed to the next middleware or route handler
-  },
-  signToken: function ({ username, email, _id }) {
-    const payload = { username, email, _id };
-    return jwt.sign({ data: payload }, secret, { expiresIn: expiration });
-  },
-};
+startApolloServer();
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../client/public")));
+}
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/public/index.html"));
+});
+
+app.use((req, res, next) => {
+  next({ status: 404, message: "Not Found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({ error: err.message });
+});
